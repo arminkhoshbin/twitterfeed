@@ -10,7 +10,7 @@ var express = require('express'),
 	moment = require('moment'),
 	usage = require('usage'),
 	host = 'localhost',
-	port = 3000;
+	port = 80;
 
 // Persistance datastore with manual loading
 var db = new Datastore({ filename: 'Datastore/' + moment().format('YYYYMMDDHHmmss_') + 'db.json' });
