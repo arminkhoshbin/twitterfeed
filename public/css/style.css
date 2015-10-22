@@ -1,0 +1,68 @@
+.container {
+  padding-top: 30px;
+}
+#content {
+    font: 12px "Lucida Grande", "Open Sans";
+    min-height: 300px;
+}
+
+@-webkit-keyframes drop {
+  0%   { opacity: 0; -webkit-transform: translateY(-20px); }
+  100% { opacity: 1; -webkit-transform: translateY(0px); }
+}
+
+@keyframes drop {
+  0%   { opacity: 0; transform: translateY(-20px); }
+  100% { opacity: 1; transform: translateY(0px); }
+}
+
+#content .new {
+	animation: drop 500ms;
+    -webkit-animation: drop 500ms;
+}
+
+#content ul {
+	margin: 0;
+  padding: 0;
+    height: 300px;
+    line-height: 30px;
+    overflow-y: auto;
+}
+
+#content li {
+	 height: 27px;
+    display: table;
+    width: 368px;
+    vertical-align: middle;
+    color: #4B434D;
+    list-style-type: none;
+    margin-bottom: 14px;
+}
+
+#content li img {
+  width: 30px;
+    height: 30px;
+    border-radius: 100%;
+    float: left;
+    margin-right: 10px;
+    display: table-cell;
+}
+
+#content li .tweet {
+    max-width: 600px;
+    margin-left: 10px;
+    overflow: hidden;
+    display: table-cell;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    position: relative;
+    top: -10px;
+}
+#filterForm .btn {
+  width: 100%;
+}
+#sentimentChart {
+  width: 100%; 
+  height: 400px;
+  padding-top: 15px;
+}

@@ -1,0 +1,29 @@
+doctype html
+html
+	head
+		title= "Twitter Stream Live Filter"
+		link(rel='stylesheet', href='/css/style.css')
+		link(rel='stylesheet', href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css')
+	body
+	div.container
+		div.row
+			div.col-md-8
+				div.panel.panel-default
+					div.panel-body#content
+						ul
+			div.col-md-4
+				form(id='filterForm')
+					div.form-group
+						label(for='query') Query
+						input.form-control(id='query', type='text',value='', placeholder='Filter', name='query')
+					input.btn.btn-default(type='submit', value='Apply')
+		div.row
+			div.col-md-12
+				div#sentimentChart
+				button.btn.btn-default(id='refresh') Refresh
+
+	script(src="//code.jquery.com/jquery-1.11.3.min.js")
+	script(src='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js')
+	script(src='https://cdn.socket.io/socket.io-1.3.7.js')
+	script(src="https://www.google.com/jsapi?autoload={'modules':[{'name':'visualization','version':'1.1','packages':['bar']}]}")
+	script(src='/js/main.js')
