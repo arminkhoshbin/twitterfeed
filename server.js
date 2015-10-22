@@ -76,7 +76,7 @@ app.get('/status', function (req, res) {
                 usage.lookup(pid, function(err, result) { // result.cpu is the current cpu in %
                         if(result.cpu > 70) {
                                 // server status is bad!
-                                statusCode = 505;
+                                statusCode = 500;
                         } else {
                                 // server status is good, keep them traffic coming!
                                 statusCode = 200;
