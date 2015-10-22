@@ -73,7 +73,8 @@ app.get('/', function (req, res) {
 
 app.get('/status', function (req, res) {
                 var statusCode;
-                usage.lookup(pid, function(err, result) { // result.cpu is the current cpu in %
+                var options = { keepHistory: true };
+                usage.lookup(pid, options, function(err, result) { // result.cpu is the current cpu in %
                         if(result.cpu > 70) {
                                 // server status is bad!
                                 statusCode = 500;
