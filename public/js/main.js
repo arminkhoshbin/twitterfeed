@@ -1,6 +1,6 @@
 var chart;
 var options;
-var socket = io.connect(window.location.host);
+var socket = io.connect(window.location.hostname + ':3000');
 var messages = [];
 var chartData;
 var content = $("#content");
