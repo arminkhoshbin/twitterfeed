@@ -4,7 +4,6 @@ var express = require('express'),
 	secret = require('./config'),
 	Twit = require('twit'),
 	bodyParser = require('body-parser'),
-	io = require('socket.io')(server),
 	sentiment = require('sentiment'),
 	Datastore = require('nedb'),
 	moment = require('moment'),
@@ -22,31 +21,6 @@ server.listen(port);
 
 var pid = process.pid;
 
-io.on('connection', function (socket) {
-	console.log('Socket Established');
-
-	socket.on('refresh', function(data) {
-		var tSentiment = {'positive': 0, 'negative': 0, 'netural': 0};
-    db.find({}, function (err, docs) {
-    	if(err) console.log(err);
-    	for(var i=0; i < docs.length; i++) {
-    		var s = sentiment(docs[i].text);
-    		if (s.score < 0) {
-					tSentiment.negative++;
-				}
-				if (s.score > 0) {
-					tSentiment.positive++;
-				}
-				if (s.score == 0) {
-					tSentiment.netural++;
-				}
-    	}
-    	socket.emit('sentiment', tSentiment);
-		});
-  });
-
-});
-
 app.set('views', __dirname + '/views');
 app.set('view engine', "jade");
 app.engine('jade', require('jade').__express);
@@ -61,6 +35,7 @@ var T = new Twit({
 });
 
 var stream;
+var queries;
 
 app.use( bodyParser.json() );       // to support JSON-encoded bodies
 app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
@@ -71,46 +46,15 @@ app.get('/', function (req, res) {
 	res.render("index");
 });
 
-app.get('/status', function (req, res) {
-                var statusCode;
-                var options = { keepHistory: true };
-                usage.lookup(pid, options, function(err, result) { // result.cpu is the current cpu in %
-                        if(result.cpu > 70) {
-                                // server status is bad!
-                                statusCode = 500;
-                        } else {
-                                // server status is good, keep them traffic coming!
-                                statusCode = 200;
-                        }
-                    res.status(statusCode);
-                    res.send();
-                });
-});
-
-app.post('/query', function (req, res) {
-	var queries = req.body.query.split(",");
-	if (stream != null) {
-		stream.stop();
-		stream = T.stream('statuses/filter', { track: queries });
-	} else {
-		stream = T.stream('statuses/filter', { track: queries });
-	}
-	stream.on('tweet', function (tweet) {
-		var doc = {
-			tweetID: tweet.id,
-			text: tweet.text,
-			created: new Date(),
-			query: req.body.query,
-		};
-
-		db.insert(doc, function (err) {
-			if(err) console.log(err);
-		});
-		
-		io.sockets.emit('newTweet', tweet);
-
-		var tSentiment = {'positive': 0, 'negative': 0, 'netural': 0};
-    db.find({query: req.body.query }, function (err, docs) {
+app.get('/update', function (req, res) {
+	var tweets;
+	// Last 10 tweets
+	db.find({}).sort({ created: -1 }).limit(10).exec(function (err, docs) {
+	  tweets = docs;
+	});
+	
+	var tSentiment = {'positive': 0, 'negative': 0, 'netural': 0};
+	db.find({query: { $in: queries }}, function (err, docs) {
     	if(err) console.log(err);
     	for(var i=0; i < docs.length; i++) {
     		var s = sentiment(docs[i].text);
@@ -124,11 +68,55 @@ app.post('/query', function (req, res) {
 					tSentiment.netural++;
 				}
     	}
-    	io.sockets.emit('sentiment', tSentiment);
+    	res.send({'tweets': tweets, 'sentiment': tSentiment});
+	});
+
+});
+
+app.get('/status', function (req, res) {
+                var statusCode;
+                usage.lookup(pid, function(err, result) { // result.cpu is the average cpu in %
+                        if(result.cpu > 70) {
+                                // server status is bad!
+                                statusCode = 500;
+                        } else {
+                                // server status is good, keep them traffic coming!
+                                statusCode = 200;
+                        }
+                    res.status(statusCode);
+                    res.send();
+                });
+});
+
+app.post('/query', function (req, res) {
+	queries = req.body.query.split(",");
+
+	if (stream != null) {
+		stream.stop();
+	}
+
+	stream = T.stream('statuses/filter', { track: queries });
+	
+	stream.on('tweet', function (tweet) {
+		var doc = {
+			tweetID: tweet.id,
+			text: tweet.text,
+			profile: tweet.user.profile_image_url_https,
+			created: new Date(),
+			query: queries,
+		};
+
+		db.insert(doc, function (err) {
+			if(err) console.log(err);
 		});
 
 	});
 
+	res.end();
+});
+
+app.get('/stop', function (req, res) {
+	stream.stop();
 	res.end();
 });
 

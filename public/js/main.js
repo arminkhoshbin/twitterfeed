@@ -1,32 +1,8 @@
 var chart;
 var options;
-var socket = io.connect(window.location.host);
-var messages = [];
 var chartData;
 var content = $("#content");
-socket.on('newTweet', function (data) {
-  if(data.text) {
-    messages.unshift(data.text);
-    var newTweet = '<li class="new"><img src="' + data.user.profile_image_url_https + '"><span class="tweet">' + data.text + '</span></li>';
-    $('#content ul').prepend(newTweet);
-  } else {
-    console.log("There is a problem:", data);
-    }
-});
-
-socket.on('sentiment', function (data) {
-  if(data) {
-    chartData = [['Type', 'Positive', 'Negative', 'Neutral'],
-                  [' ', data.positive,
-                  data.negative,
-                  data.netural]
-                ];
-    drawChart();
-  } else {
-    console.log("There is a problem:", data);
-    }
-});
-
+var updateTimeout;
 $('#filterForm').submit(function(e) {
   var values = $('#filterForm').serialize();
   $.ajax({
@@ -38,16 +14,78 @@ $('#filterForm').submit(function(e) {
         },
         error: function(jqXHR, textStatus, errorThrown) {
            console.log(textStatus, errorThrown);
-        }
+        },
+        complete: function() {
+          getUpdates();
+        },
 
   });
   e.preventDefault();
 });
 
 $('#refresh').click(function(e) {
-  socket.emit('refresh', {});
+  $.ajax({
+    url: '/update', 
+    success: function(data) {
+      if(data.sentiment) {
+        chartData = [['Type', 'Positive', 'Negative', 'Neutral'],
+                    [' ', data.sentiment.positive,
+                    data.sentiment.negative,
+                    data.sentiment.netural]
+                  ];
+        drawChart();
+      }
+      if(data.tweets) {
+        data.tweets.forEach(function(tweet) {
+          var newTweet = '<li class="new"><img src="' + tweet.profile + '"><span class="tweet">' + tweet.text + '</span></li>';
+          $('#content ul').prepend(newTweet);
+        });
+      }
+    },
+  });
   e.preventDefault();
 });
+
+$('#stop').click(function(e) {
+  if(updateTimeout) {
+    clearTimeout(updateTimeout);
+    updateTimeout = 0;
+  }
+  $.ajax({
+    url: '/stop', 
+    success: function(data) {
+    },
+  });
+  e.preventDefault();
+});
+
+
+function getUpdates() {
+  $.ajax({
+    url: '/update', 
+    success: function(data) {
+      if(data.sentiment) {
+        chartData = [['Type', 'Positive', 'Negative', 'Neutral'],
+                    [' ', data.sentiment.positive,
+                    data.sentiment.negative,
+                    data.sentiment.netural]
+                  ];
+        drawChart();
+      }
+      if(data.tweets) {
+        $('#content ul').html('');
+        data.tweets.forEach(function(tweet) {
+          var newTweet = '<li class="new"><img src="' + tweet.profile + '"><span class="tweet">' + tweet.text + '</span></li>';
+          $('#content ul').prepend(newTweet);
+        });
+      }
+    },
+    complete: function() {
+      // Schedule the next request when the current one's complete
+      updateTimeout = setTimeout(getUpdates, 1000);
+    }
+  });
+}
 
 google.setOnLoadCallback(init);
 
