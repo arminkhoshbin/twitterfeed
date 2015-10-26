@@ -8,6 +8,7 @@ var express = require('express'),
 	moment = require('moment'),
 	usage = require('usage'),
 	mysql = require('mysql'),
+	cookieParser = require('cookie-parser'),
 	host = 'localhost',
 	port = 3000;
 
@@ -31,6 +32,7 @@ con.query('CREATE TABLE IF NOT EXISTS tweets (tweetID INT, text VARCHAR(255) CHA
 	if(err) throw err;
 });
 
+app.use(cookieParser());
 server.listen(port);
 
 var pid = process.pid;
@@ -62,6 +64,11 @@ app.get('/', function (req, res) {
 });
 
 app.get('/update', function (req, res) {
+
+	if(req.cookies.queryTime) {
+		dateTime = decodeURI(req.cookies.queryTime);
+	}
+
 	var tweets;
 	// Last 10 tweets
 	con.query('SELECT * FROM tweets ORDER BY created DESC LIMIT 10', function(err, rows) {
@@ -107,11 +114,12 @@ app.get('/status', function (req, res) {
 app.post('/query', function (req, res) {
 	queries = req.body.query.split(",");
 
+	dateTime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
+	res.cookie('queryTime', dateTime);
+
 	con.query('truncate tweets', function(err, res){
 		if(err) throw err;
 	});
-
-	dateTime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
 
 	if (stream != null) {
 		stream.stop();
