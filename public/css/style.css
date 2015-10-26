@@ -17,8 +17,8 @@
 }
 
 #content .new {
-	animation: drop 500ms;
-    -webkit-animation: drop 500ms;
+	//animation: drop 500ms;
+   // -webkit-animation: drop 500ms;
 }
 
 #content ul {

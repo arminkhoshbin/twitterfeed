@@ -28,10 +28,10 @@ app.engine('jade', require('jade').__express);
 app.use(express.static(__dirname + '/public'));
 
 var T = new Twit({
-    consumer_key: secret.Twitter.consumer_key
-  , consumer_secret: secret.Twitter.consumer_secret
-  , access_token: secret.Twitter.access_token
-  , access_token_secret: secret.Twitter.access_token_secret
+    consumer_key: process.env.consumer_key
+  , consumer_secret: process.env.consumer_secret
+  , access_token: process.env.access_token
+  , access_token_secret: process.env.access_token_secret
 });
 
 var stream;
