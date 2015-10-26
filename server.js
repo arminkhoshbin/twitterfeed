@@ -5,16 +5,30 @@ var express = require('express'),
 	Twit = require('twit'),
 	bodyParser = require('body-parser'),
 	sentiment = require('sentiment'),
-	Datastore = require('nedb'),
 	moment = require('moment'),
 	usage = require('usage'),
+	mysql = require('mysql'),
 	host = 'localhost',
 	port = 3000;
 
-// Persistance datastore with manual loading
-var db = new Datastore({ filename: 'Datastore/' + moment().format('YYYYMMDDHHmmss_') + 'db.json' });
-db.loadDatabase(function (err) {
-	if(err) console.log(err);
+// Create mysql connection
+var con = mysql.createConnection({
+  host: process.env.mysql_host,
+  user: process.env.mysql_user,
+  password: process.env.mysql_pass,
+  database: process.env.mysql_db
+});
+
+con.connect(function(err){
+  if(err){
+    console.log('Error connecting to Db');
+    return;
+  }
+  console.log('Connection established');
+});
+
+con.query('CREATE TABLE IF NOT EXISTS tweets (tweetID INT, text VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_general_ci, profile VARCHAR(255), created DATETIME)', function(err, result) {
+	if(err) throw err;
 });
 
 server.listen(port);
@@ -36,6 +50,7 @@ var T = new Twit({
 
 var stream;
 var queries;
+var dateTime;
 
 app.use( bodyParser.json() );       // to support JSON-encoded bodies
 app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
@@ -49,24 +64,25 @@ app.get('/', function (req, res) {
 app.get('/update', function (req, res) {
 	var tweets;
 	// Last 10 tweets
-	db.find({}).sort({ created: -1 }).limit(10).exec(function (err, docs) {
-	  tweets = docs;
+	con.query('SELECT * FROM tweets ORDER BY created DESC LIMIT 10', function(err, rows) {
+	  if(err) throw err;
+	  tweets = rows;
 	});
 	
 	var tSentiment = {'positive': 0, 'negative': 0, 'netural': 0};
-	db.find({query: { $in: queries }}, function (err, docs) {
-    	if(err) console.log(err);
-    	for(var i=0; i < docs.length; i++) {
-    		var s = sentiment(docs[i].text);
+	con.query("SELECT * FROM tweets WHERE created > '" + dateTime + "'", function(err, rows) {
+	  	if(err) throw err;
+    	for(var i=0; i < rows.length; i++) {
+    		var s = sentiment(rows[i].text);
     		if (s.score < 0) {
-					tSentiment.negative++;
-				}
-				if (s.score > 0) {
-					tSentiment.positive++;
-				}
-				if (s.score == 0) {
-					tSentiment.netural++;
-				}
+				tSentiment.negative++;
+			}
+			if (s.score > 0) {
+				tSentiment.positive++;
+			}
+			if (s.score == 0) {
+				tSentiment.netural++;
+			}
     	}
     	res.send({'tweets': tweets, 'sentiment': tSentiment});
 	});
@@ -91,6 +107,12 @@ app.get('/status', function (req, res) {
 app.post('/query', function (req, res) {
 	queries = req.body.query.split(",");
 
+	con.query('truncate tweets', function(err, res){
+		if(err) throw err;
+	});
+
+	dateTime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
+
 	if (stream != null) {
 		stream.stop();
 	}
@@ -102,12 +124,11 @@ app.post('/query', function (req, res) {
 			tweetID: tweet.id,
 			text: tweet.text,
 			profile: tweet.user.profile_image_url_https,
-			created: new Date(),
-			query: queries,
+			created: moment(new Date()).format("YYYY-MM-DD HH:mm:ss")
 		};
 
-		db.insert(doc, function (err) {
-			if(err) console.log(err);
+		con.query('INSERT INTO tweets SET ?', doc, function(err, res){
+		  if(err) throw err;
 		});
 
 	});
